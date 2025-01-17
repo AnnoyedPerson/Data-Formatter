@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang = "en-US">
+    <head>
+        <meta charset = "UTF-8">
+        <title>GroupProject.php</title>
+        <style type = "text/css">
+            input[type="submit"] 
+            {
+                height: 200px; /* Set the height in pixels or other units */
+                width: 300px;  /* Set the width in pixels or other units */
+            }
+            textarea 
+            {
+                resize: none;
+                height: 200px; /* Set the height in pixels or other units */
+                width: 1500px;  /* Set the width in pixels or other units */
+            }
+            table, th, td {border: 1px solid black};
+            form 
+            { 
+                border: 3px solid #f1f1f1; 
+            } 
+            .container 
+            { 
+                padding: 25px; 
+                background-color: lightblue;
+                display: flex;
+                margin-left:-5px;
+                margin-right:-5px;
+            } 
+            table 
+            {
+                width: 100%;
+                border-spacing: 0;
+                border: 1px solid #ddd;
+                border-collapse: collapse;
+            }
+            th, td 
+            {
+                border: 1px solid black;
+                padding: 8px;
+                text-align: center;
+                font-family: Arial, sans-serif;
+            }
+            .table2 
+            {
+                border-collapse: collapse;
+                border-spacing: 0;
+                border: 1px solid #ddd;
+                width: 40%;
+            }
+            .container2
+            {
+                padding: 25px; 
+                background-color: pink;
+                display: flex;
+                margin-left:-5px;
+                margin-right:-5px;
+            }
+            .column {
+                flex: 50%;
+            }
+        </style>
+    </head>
+    <body>
+    <center> <h1> CP476 Group Project: Database Page </h1> </center>
+        <form>
+            <?php 
+                $host = "localhost";
+                $database = "GroupProject001";            
+
+                $handle = fopen("users.txt", "r");
+                if ($handle) 
+                {
+                    $line = fgets($handle);
+                }
+                fclose($handle);
+
+                $usersArr = explode(" ", $line);
+                
+                $userName = $usersArr[0];
+                $userPass = $usersArr[1];
+
+                //file_put_contents('users.txt', "");
+                
+                //$conn = mysqli_connect($host, $userName, $userPass, $database);
+                $conn = new PDO('mysql:host=localhost;dbname=groupproject001', $userName, $userPass);
+            ?>
+
+            <div class="container" style="display: flex;">
+                <div class="column">
+                    <h2> Product Table</h2>
+                    <table border="1" class="table">
+                        <tr>
+                            
+                                <div>
+                                    <?php 
+                                        $query_product = "SELECT * FROM Product";
+                                        printTable($conn, $query_product);
+                                    ?>
+                                </div>
+                            
+                        </tr>
+                    </table>
+                    <h2> Supplier Table</h2>
+                    <table border="1" class="table2">
+                        <tr>
+                            
+                                <div>
+                                    <?php 
+                                        $query_supplier = "SELECT * FROM Supplier";
+                                        printTable($conn, $query_supplier);
+                                    ?>
+                                </div>
+                            
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </form>
+        
+        <form id="myForm" method="post" action=<?php echo $_SERVER['PHP_SELF']; ?>>
+            <div class="container2" style="display: flex;">
+                <div class="column">
+                    <h2> Output Table</h2>
+                    <table border="1" class="table2">
+                        <tr>
+                            <div>
+                                <?php 
+                                    //$query_inventory = "SELECT Product_ID, Product_Name, Quantity, Price, Status, Supplier_Name FROM Product LEFT JOIN Supplier ON Product.Supplier_ID = Supplier.Supplier_ID";
+                                    //printTable($conn, "SELECT Product_ID, Product_Name, Quantity, Price, Status, Supplier_Name FROM Product LEFT JOIN Supplier ON Product.Supplier_ID = Supplier.Supplier_ID", "inventory");
+                                    executeQuery($conn);
+                                ?>
+                                
+                            </div>
+                        </tr>
+                        <label for="sqlQuery">Query:</label>
+                        <textarea name="sqlQuery" placeholder="Enter your SQL query here... Leave blank for inventory... Fields are Case Sensitive..." ></textarea>
+                        <input type="submit" value="Execute Query">
+                    </table>
+                </div>     
+            </div>
+        </form>
+
+        <script>
+            document.getElementById("myForm").addEventListener("<?php echo $_SERVER['PHP_SELF']; ?>", function(event) 
+            {
+                // Prevent the default form submission behavior
+                event.preventDefault();
+
+                // Custom actions or validations before form submission
+                // For example, you can access form data and perform some checks
+                file_put_contents('users.txt', $userName, FILE_APPEND);
+                file_put_contents('users.txt', " ", FILE_APPEND);
+                file_put_contents('users.txt', $userPass, FILE_APPEND);
+
+                $enteredQuery = $_POST["sqlQuery"];
+                file_put_contents('query.txt', $enteredQuery, FILE_APPEND);
+
+                // After processing, you can submit the form programmatically
+                this.submit();
+
+                // Alternatively, you can perform other actions without submitting the form
+                // For example, display a success message, send an AJAX request, etc.
+            });
+        </script>
+    </body>
+
+    <body>
+    <p>
+    <?php
+        function printTable($conn, $query)
+        {
+            try 
+            {
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                $result = $conn->query($query);
+                
+                if($result->rowCount() != 0)
+                {
+                    //return only the first row (we only need field names)
+                    $row = $result->fetch(PDO::FETCH_ASSOC);
+                    print " <tr> ";
+                    foreach ($row as $field => $value)
+                    {
+                        print " <th>$field</th>";
+                    } // end foreach
+                                    
+                    //second query gets the data
+                    
+                    $data = $conn->query($query);
+                    $data->setFetchMode(PDO::FETCH_ASSOC);
+                    
+                    foreach($data as $row)
+                    {
+                        print " <tr>";
+                        foreach ($row as $name=>$value)
+                        {
+                            print " <td>$value</td>";
+                        } // end field loop
+                        print " </tr>";
+                    } // end record loop
+                    print "</table>";
+                }
+            } 
+            catch(PDOException $e) 
+            {
+                echo 'ERROR: ' . $e->getMessage();
+            } // end try
+        }
+
+        function executeQuery($conn)
+        {
+            try 
+            {
+                if (isset($_POST["sqlQuery"]))
+                    $enteredQuery = $_POST["sqlQuery"];
+                else
+                    $enteredQuery = "";
+
+                file_put_contents('query.txt', $enteredQuery, FILE_APPEND);
+
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                $handle = fopen("query.txt", "r");
+                if ($handle) 
+                {
+                    $query = fgets($handle);
+                }
+
+                if($query == null || $query == "")
+                {
+                    $query = "SELECT Product_ID, Product_Name, Quantity, Price, Status, Supplier_Name FROM Product LEFT JOIN Supplier ON Product.Supplier_ID = Supplier.Supplier_ID";
+                }
+
+                file_put_contents('query.txt', "");
+
+                fclose($handle);
+
+                $queryCall = explode(" ", $query);
+                if(strtolower($queryCall[0]) == "update")
+                {
+                    $conn->query($query);
+                    $query = "SELECT * FROM $queryCall[1]";
+                }
+                elseif(strtolower($queryCall[0]) == "delete" || strtolower($queryCall[0]) == "insert")
+                {
+                    $conn->query($query);
+                    $query = "SELECT * FROM $queryCall[2]";
+                }
+                $result = $conn->query($query);
+                
+                if($result->rowCount() != 0)
+                {
+                    //return only the first row (we only need field names)
+                    $row = $result->fetch(PDO::FETCH_ASSOC);
+                    print " <tr> ";
+                    foreach ($row as $field => $value)
+                    {
+                        print " <th>$field</th>";
+                    } // end foreach
+                    
+                    print " </tr>";
+                    
+                    //second query gets the data
+                    
+                    $data = $conn->query($query);
+                    $data->setFetchMode(PDO::FETCH_ASSOC);
+                    
+                    foreach($data as $row)
+                    {
+                        print " <tr>";
+                        foreach ($row as $name=>$value)
+                        {
+                            print " <td>$value</td>";
+                        } // end field loop
+                        print " </tr>";
+                    } // end record loop
+                    print "</table>";
+                }
+            } 
+            catch(PDOException $e) 
+            {
+                echo 'ERROR: ' . $e->getMessage();
+            } // end try
+        }
+    ?>
+    </p>
+    </body>
+</html>
